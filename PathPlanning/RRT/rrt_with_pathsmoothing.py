@@ -136,7 +136,7 @@ def path_smoothing(path, max_iter, obstacle_list, robot_radius=0.0):
         List[List[float]]: The smoothed path as a list of [x, y] coordinates.
 
     Example:
-        >>> smoothed = path_smoothing(path, 1000, obstacle_list, robot_radius=0.5)
+        #>>> smoothed = path_smoothing(path, 1000, obstacle_list, robot_radius=0.5)
     """
     le = get_path_length(path)
 
