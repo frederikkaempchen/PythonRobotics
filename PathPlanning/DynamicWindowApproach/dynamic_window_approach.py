@@ -46,10 +46,11 @@ class Config:
         self.v_resolution = 0.01  # [m/s]
         self.yaw_rate_resolution = 0.1 * math.pi / 180.0  # [rad/s]
         self.dt = 0.1  # [s] Time tick for motion prediction
-        self.predict_time = 3.0  # [s]
-        self.to_goal_cost_gain = 0.15
-        self.speed_cost_gain = 1.0
-        self.obstacle_cost_gain = 1.0
+        self.predict_time = 2.0  # [s]
+        self.to_goal_cost_gain = 0.4
+        self.speed_cost_gain = 5
+        self.obstacle_cost_gain = 10.0
+        self.turning_cost_gain = 0.5
         self.robot_stuck_flag_cons = 0.001  # constant to prevent robot stucked
         self.robot_type = RobotType.circle
 
@@ -61,9 +62,13 @@ class Config:
         self.robot_width = 0.5  # [m] for collision check
         self.robot_length = 1.2  # [m] for collision check
         # obstacles [x(m) y(m), ....]
-        self.ob = np.array([[1, -1],
+        self.ob = np.array([[1.5, -1],
+                            [1, -1],
+                            [0.5, -1],
                             [0, -1],
+                            [-0.5, -1],
                             [-1, -1],
+                            [-1.5, -1],
                             [-2, -1],
                             [-2, 0],
                             [-2, 1],
@@ -121,7 +126,66 @@ class Config:
                             [7, 3],
                             [7, 2],
                             [7, 1],
-                            [7, 0]
+                            [7, 0],
+                            [-2, -0.5],
+                            [-2, 0.5],
+                            [-2, 1.5],
+                            [-2, 2.5],
+                            [-2, 3.5],
+                            [-2, 4.5],
+                            [-2, 5.5],
+                            [-2, 6.5],
+                            [-2, 7.5],
+                            [-2, 8.5],
+                            [-2, 9.5],
+                            [-2, 10.5],
+                            [-2, 11.5],
+                            [-1.5, 11],
+                            [0.5, 11],
+                            [1.5, 11],
+                            [2.5, 11],
+                            [3.5, 11],
+                            [4.5, 11],
+                            [5.5, 11],
+                            [6.5, 11],
+                            [7.5, 11],
+                            [8.5, 11],
+                            [9.5, 11],
+                            [10.5, 11],
+                            [11, 11],
+                            [11, 10.5],
+                            [11, 9.5],
+                            [11, 8.5],
+                            [11, 7.5],
+                            [11, 6.5],
+                            [11, 5.5],
+                            [11, 4.5],
+                            [11, 3.5],
+                            [11, 2.5],
+                            [11, 1.5],
+                            [11, 0.5],
+                            [2, -1],
+                            [2, -0.5],
+                            [2, 0.5],
+                            [2, 1.5],
+                            [2, 2.5],
+                            [2, 3.5],
+                            [2, 4.5],
+                            [2, 5.5],
+                            [2, 6.5],
+                            [2.5, 7.0],
+                            [3.5, 7.0],
+                            [4.5, 7.0],
+                            [5.5, 7.0],
+                            [6.5, 7.0],
+                            [7, 7.0],
+                            [7, 6.5],
+                            [7, 5.5],
+                            [7, 4.5],
+                            [7, 3.5],
+                            [7, 2.5],
+                            [7, 1.5],
+                            [7, 0.5]
                             ])
 
     @property
@@ -190,7 +254,7 @@ def predict_trajectory(x_init, v, y, config):
     return trajectory
 
 
-def calc_control_and_trajectory(x, dw, config, goal, ob):
+'''def calc_control_and_trajectory(x, dw, config, goal, ob):
     """
     calculation final input with dynamic window
     """
@@ -224,7 +288,49 @@ def calc_control_and_trajectory(x, dw, config, goal, ob):
                     # best omega=0 rad/s (heading to the goal with
                     # angle difference of 0)
                     best_u[1] = -config.max_delta_yaw_rate
+    return best_u, best_trajectory'''
+
+
+def calc_control_and_trajectory(x, dw, config, goal, ob):
+    """
+    Calculation of final input with dynamic window.
+    This version includes a new cost for turning.
+    """
+    x_init = x[:]
+    min_cost = float("inf")
+    best_u = [0.0, 0.0]
+    best_trajectory = np.array([x])
+
+    # Evaluate all trajectories with sampled inputs in the dynamic window
+    for v in np.arange(dw[0], dw[1], config.v_resolution):
+        for y in np.arange(dw[2], dw[3], config.yaw_rate_resolution):
+            trajectory = predict_trajectory(x_init, v, y, config)
+
+            # --- Calculate individual costs ---
+            to_goal_cost = config.to_goal_cost_gain * calc_to_goal_cost(trajectory, goal)
+            speed_cost = config.speed_cost_gain * (config.max_speed - trajectory[-1, 3])
+            ob_cost = config.obstacle_cost_gain * calc_obstacle_cost(trajectory, ob, config)
+            turning_cost = config.turning_cost_gain * calc_turning_cost(y)
+
+            # --- Final combined cost ---
+            final_cost = to_goal_cost + speed_cost + ob_cost + turning_cost
+
+            # Search for the trajectory with the minimum cost
+            if min_cost >= final_cost:
+                min_cost = final_cost
+                best_u = [v, y]
+                best_trajectory = trajectory
+                if abs(best_u[0]) < config.robot_stuck_flag_cons \
+                        and abs(x[3]) < config.robot_stuck_flag_cons:
+                    best_u[1] = -config.max_delta_yaw_rate
+
     return best_u, best_trajectory
+
+def calc_turning_cost(yaw_rate):
+    """
+    Calculates a cost based on the robot's turning rate.
+    """
+    return abs(yaw_rate)
 
 
 def calc_obstacle_cost(trajectory, ob, config):
@@ -267,9 +373,10 @@ def calc_to_goal_cost(trajectory, goal):
 
     dx = goal[0] - trajectory[-1, 0]
     dy = goal[1] - trajectory[-1, 1]
-    error_angle = math.atan2(dy, dx)
+    cost = np.hypot(dx, dy)
+    '''error_angle = math.atan2(dy, dx)
     cost_angle = error_angle - trajectory[-1, 2]
-    cost = abs(math.atan2(math.sin(cost_angle), math.cos(cost_angle)))
+    cost = abs(math.atan2(math.sin(cost_angle), math.cos(cost_angle)))'''
 
     return cost
 
@@ -306,7 +413,7 @@ def plot_robot(x, y, yaw, config):  # pragma: no cover
 def main(gx=10.0, gy=0.0, robot_type=RobotType.circle):
     print(__file__ + " start!!")
     # initial state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
-    x = np.array([0.0, 0.0, math.pi / 2.0, 0.0, 0.0])
+    x = np.array([0.0, 0.0, math.pi , 0.0, 0.0])
     # goal position [x(m), y(m)]
     goal = np.array([gx, gy])
 
