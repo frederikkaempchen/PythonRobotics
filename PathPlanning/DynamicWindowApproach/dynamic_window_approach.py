@@ -38,19 +38,19 @@ class Config:
 
     def __init__(self):
         # robot parameter
-        self.max_speed = 3.0  # [m/s]
-        self.min_speed = -0.5  # [m/s]
-        self.max_yaw_rate = 40.0 * math.pi / 180.0  # [rad/s]
-        self.max_accel = 0.2  # [m/ss]
+        self.max_speed = 2 # [m/s]
+        self.min_speed = -0.5 # [m/s]
+        self.max_yaw_rate = 80.0 * math.pi / 180.0  # [rad/s]
+        self.max_accel = 0.12  # [m/ss]
         self.max_delta_yaw_rate = 40.0 * math.pi / 180.0  # [rad/ss]
-        self.v_resolution = 0.05  # [m/s]
+        self.v_resolution = 0.01  # [m/s]
         self.yaw_rate_resolution = 0.5 * math.pi / 180.0  # [rad/s]
         self.dt = 0.1  # [s] Time tick for motion prediction
         self.predict_time = 3.0  # [s]
-        self.to_goal_cost_gain = 0.4
-        self.speed_cost_gain = 7
+        self.to_goal_cost_gain = 1
+        self.speed_cost_gain = 5
         self.obstacle_cost_gain = 10.0
-        self.turning_cost_gain = 0.5
+        self.turning_cost_gain = 1.5
         self.robot_stuck_flag_cons = 0.001  # constant to prevent robot stucked
         self.robot_type = RobotType.circle
 
@@ -185,7 +185,22 @@ class Config:
                             [7, 3.5],
                             [7, 2.5],
                             [7, 1.5],
-                            [7, 0.5]
+                            [7, 0.5],
+
+                            [3, 7.5],
+                            [3, 8],
+                            [3, 8.5],
+                            [3, 9],
+                            [3, 9.5],
+
+
+
+                            [6, 9],
+                            [6, 9.5],
+                            [6, 10],
+                            [6, 10.5],
+
+
                             ])
 
     @property
@@ -413,7 +428,7 @@ def plot_robot(x, y, yaw, config):  # pragma: no cover
 def main(gx=10.0, gy=0.0, robot_type=RobotType.circle):
     print(__file__ + " start!!")
     # initial state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
-    x = np.array([0.0, 0.0, math.pi , 0.0, 0.0])
+    x = np.array([0.0, 0.0, math.pi/2 , 0.0, 0.0])
     # goal position [x(m), y(m)]
     goal = np.array([gx, gy])
 
